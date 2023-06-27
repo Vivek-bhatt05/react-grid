@@ -1,5 +1,5 @@
 // import './App.css';
-import { ReactGrid, Column, Row, CellChange, TextCell ,Id} from "@silevis/reactgrid";
+import { ReactGrid, Column, Row, CellChange, TextCell ,Id ,MenuOption,SelectionMode} from "@silevis/reactgrid";
 import "@silevis/reactgrid/styles.css";
 import { useEffect, useState } from 'react';
 
@@ -86,7 +86,8 @@ const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
       ]
     },
     ...people.map<Row>((person, i) => ({
-      rowId: person.id,
+      // rI: person.id,
+      rowId: i,
       reorderable: true,
       cells: [
         { type: "text", text: person[columnsOrder[0]] },
@@ -96,7 +97,7 @@ const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
     }))
   ]
 };
-
+ 
 
 //function for changes done in table
 const appplyChanges=(
@@ -104,10 +105,18 @@ const appplyChanges=(
   prevPeople:Person[]
 ):Person[]=>{
   changes.forEach((change)=>{
+
+    console.log(changes)
     const personIndex= change.rowId;
     const fieldName= change.columnId;
 
+    console.log(personIndex)
+    console.log(fieldName)
+
+    
     prevPeople[personIndex][fieldName]= change.newCell.text;
+    console.log(prevPeople[personIndex][fieldName])
+    console.log(change)
   });
 
 
@@ -140,20 +149,21 @@ function App() {
  
   const [people,setPeople] = useState<Person[]>([]);
   const [columns, setColumns] = useState<Column[]>(getColumns());
+   console.log(people)
   useEffect(()=>{
    getPeople()
   },[])
 
-  console.log(people)
+  // console.log(people)
 
   const rows= getRows(people,columns.map(c => c.columnId as ColumnId));
   // const columns= getColumns();
 
 
   const handleColumnsReorder = (targetColumnId: Id, columnIds: Id[]) => {
-     console.log(targetColumnId)
+    //  console.log(targetColumnId)
     const to = columns.findIndex((column) => column.columnId === targetColumnId);
-    console.log(to);
+    // console.log(to);
     const columnIdxs = columnIds.map((columnId) => columns.findIndex((c) => c.columnId === columnId));
     setColumns(prevColumns => reorderArray(prevColumns, columnIdxs, to));
 }
@@ -170,6 +180,29 @@ const handleRowsReorder = (targetRowId: Id, rowIds: Id[]) => {
 //   return targetRowId !== 'header';
 // }
 
+const handleContextMenu = (
+  selectedRowIds: Id[],
+  selectedColIds: Id[],
+  selectionMode: SelectionMode,
+  menuOptions: MenuOption[]
+): MenuOption[] => {
+  if (selectionMode === "row") {
+    menuOptions = [
+      ...menuOptions,
+      {
+        id: "removePerson",
+        label: "Remove person",
+        handler: () => {
+          setPeople(prevPeople => {
+            return [...prevPeople.filter((person, idx) => !selectedRowIds.includes(person.id))]
+          })
+        }
+      }
+    ];
+  }
+  return menuOptions;
+}
+
   const handleChanges=(changes)=>{
     setPeople((prevPeople)=>appplyChanges(changes,prevPeople))
   }
@@ -185,6 +218,8 @@ const handleRowsReorder = (targetRowId: Id, rowIds: Id[]) => {
        onRowsReordered={handleRowsReorder}
 
 
+
+
       //  canReorderRows={handleCanReorderRows}
 
       //  stickyLeftColumns={1}
@@ -192,9 +227,12 @@ const handleRowsReorder = (targetRowId: Id, rowIds: Id[]) => {
 		  //  stickyTopRows={1}
 		  //  stickyBottomRows={1}
 
-      // enableRangeSelection
+      onContextMenu={handleContextMenu}
+      enableRangeSelection
       enableRowSelection
       enableColumnSelection
+      // enableFillHandle
+      // enableGroupIdRender
        />
     </div>
   );
