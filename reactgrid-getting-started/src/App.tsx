@@ -1,5 +1,5 @@
 // import './App.css';
-import { ReactGrid, Column, Row, CellChange, TextCell } from "@silevis/reactgrid";
+import { ReactGrid, Column, Row, CellChange, TextCell ,Id} from "@silevis/reactgrid";
 import "@silevis/reactgrid/styles.css";
 import { useEffect, useState } from 'react';
 
@@ -58,21 +58,24 @@ const getColumns = (): Column[] => [
   // { columnId: "website", width: 250, resizable:true, reorderable:true },
 ];
 
-const headerRow: Row = {
-  rowId: "header",
-  cells: [
-    { type: "header", text: "Name" },
-    { type: "header", text: "Email" },
-    { type: "header", text: " Phone No." },
-    { type: "header", text: " Website" },
-  ]
-};
+// const headerRow: Row = {
+//   rowId: "header",
+//   cells: [
+//     { type: "header", text: "Name" },
+//     { type: "header", text: "Email" },
+//     { type: "header", text: " Phone No." },
+//     { type: "header", text: " Website" },
+//   ]
+// };
 
 
 // new row making for reordering
+
+
+
 const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
 
-  console.log(columnMap,"test",columnsOrder)
+  // console.log(columnMap,"test",columnsOrder)
   return [
     {
       rowId: "header",
@@ -112,6 +115,14 @@ const appplyChanges=(
 }
 
 
+const reorderArray = <T extends {}>(arr: T[], idxs: number[], to: number) => {
+  const movedElements = arr.filter((_, idx) => idxs.includes(idx));
+  const targetIdx = Math.min(...idxs) < to ? to += 1 : to -= idxs.filter(idx => idx < to).length;
+  const leftSide = arr.filter((_, idx) => idx < targetIdx && !idxs.includes(idx));
+  const rightSide = arr.filter((_, idx) => idx >= targetIdx && !idxs.includes(idx));
+  return [...leftSide, ...movedElements, ...rightSide];
+}
+
 
 function App() {
 
@@ -139,6 +150,26 @@ function App() {
   // const columns= getColumns();
 
 
+  const handleColumnsReorder = (targetColumnId: Id, columnIds: Id[]) => {
+     console.log(targetColumnId)
+    const to = columns.findIndex((column) => column.columnId === targetColumnId);
+    console.log(to);
+    const columnIdxs = columnIds.map((columnId) => columns.findIndex((c) => c.columnId === columnId));
+    setColumns(prevColumns => reorderArray(prevColumns, columnIdxs, to));
+}
+
+const handleRowsReorder = (targetRowId: Id, rowIds: Id[]) => {
+    setPeople((prevPeople) => {
+        const to = people.findIndex(person => person.id === targetRowId);
+        const rowsIds = rowIds.map((id) => people.findIndex(person => person.id === id));
+        return reorderArray(prevPeople, rowsIds, to);
+    });
+}
+
+// const handleCanReorderRows = (targetRowId: Id, rowIds: Id[]): boolean => {
+//   return targetRowId !== 'header';
+// }
+
   const handleChanges=(changes)=>{
     setPeople((prevPeople)=>appplyChanges(changes,prevPeople))
   }
@@ -150,6 +181,11 @@ function App() {
        rows={rows}
        columns={columns} 
        onCellsChanged={handleChanges}
+       onColumnsReordered={handleColumnsReorder}
+       onRowsReordered={handleRowsReorder}
+
+
+      //  canReorderRows={handleCanReorderRows}
 
       //  stickyLeftColumns={1}
       //  stickyRightColumns={1}
@@ -157,8 +193,8 @@ function App() {
 		  //  stickyBottomRows={1}
 
       // enableRangeSelection
-      // enableRowSelection
-      // enableColumnSelection
+      enableRowSelection
+      enableColumnSelection
        />
     </div>
   );
