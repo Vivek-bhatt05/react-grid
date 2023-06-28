@@ -1,38 +1,22 @@
 // import './App.css';
-import { ReactGrid, Column, Row, CellChange, TextCell ,Id ,MenuOption,SelectionMode} from "@silevis/reactgrid";
+import { ReactGrid, Column, Row, CellChange, TextCell} from "@silevis/reactgrid";
 import "@silevis/reactgrid/styles.css";
 import { useEffect, useState } from 'react';
+import axios from "axios"
 
 
-interface iGeo{
-  lat: string,
-  lng: string
+
+interface MyTextCell extends TextCell {
+  dataId:string
 }
 
-interface iCompany{
-  name: string,
-  catchPhrase: string,
-  bs: string
-}
-
-interface iAddress{
-  street: string,
-  suite: string,
-  city: string,
-  zipcode: string,
-  geo: iGeo
-}
 
 //interface of Person
 interface Person{
-  id: number,
+  _id: string,
   name: string,
-  username: string,
   email: string,
-  address: iAddress,
   phone: string,
-  website: string,
-  company: iCompany
 }
 
 // interface of Column of reordering
@@ -55,7 +39,6 @@ const getColumns = (): Column[] => [
   { columnId: "name", width: 250, resizable:true, reorderable:true },
   { columnId: "email", width: 250, resizable:true, reorderable:true },
   { columnId: "phone", width: 250, resizable:true, reorderable:true },
-  // { columnId: "website", width: 250, resizable:true, reorderable:true },
 ];
 
 // const headerRow: Row = {
@@ -75,14 +58,13 @@ const getColumns = (): Column[] => [
 
 const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
 
-  // console.log(columnMap,"test",columnsOrder)
   return [
     {
       rowId: "header",
       cells: [
         { type: "header", text: columnMap[columnsOrder[0]] },
-        { type: "header", text: columnMap[columnsOrder[1]] },
-        { type: "header", text: columnMap[columnsOrder[2]] }
+        { type: "header", text: columnMap[columnsOrder[1]], },
+        { type: "header", text: columnMap[columnsOrder[2]] },
       ]
     },
     ...people.map<Row>((person, i) => ({
@@ -90,66 +72,109 @@ const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
       rowId: i,
       reorderable: true,
       cells: [
-        { type: "text", text: person[columnsOrder[0]] },
-        { type: "text", text: person[columnsOrder[1]] }, 
-        { type: "text", text: person[columnsOrder[2]] }, 
+        { type: "text", text: person[columnsOrder[0]],dataId:person._id },
+        { type: "email", text: person[columnsOrder[1]], dataId:person._id , validator : ((text: string) => true )}, 
+        { type: "text", text: person[columnsOrder[2]], dataId:person._id }, 
       ]
     }))
   ]
 };
  
 
-//function for changes done in table
-const appplyChanges=(
-  changes:CellChange<TextCell>[],
-  prevPeople:Person[]
-):Person[]=>{
-  changes.forEach((change)=>{
 
-    console.log(changes)
-    const personIndex= change.rowId;
-    const fieldName= change.columnId;
-
-    console.log(personIndex)
-    console.log(fieldName)
-
-    
-    prevPeople[personIndex][fieldName]= change.newCell.text;
-    console.log(prevPeople[personIndex][fieldName])
-    console.log(change)
-  });
-
-
-  return [...prevPeople];
-}
-
-
-const reorderArray = <T extends {}>(arr: T[], idxs: number[], to: number) => {
-  const movedElements = arr.filter((_, idx) => idxs.includes(idx));
-  const targetIdx = Math.min(...idxs) < to ? to += 1 : to -= idxs.filter(idx => idx < to).length;
-  const leftSide = arr.filter((_, idx) => idx < targetIdx && !idxs.includes(idx));
-  const rightSide = arr.filter((_, idx) => idx >= targetIdx && !idxs.includes(idx));
-  return [...leftSide, ...movedElements, ...rightSide];
-}
 
 
 function App() {
 
+  
+
+
   //get data from api and store it into state variable people
   const getPeople = async():Promise<Person[]> =>{
-    return fetch('https://jsonplaceholder.typicode.com/users')
+    return fetch('http://localhost:8000/reg')
           .then(res => res.json())
           .then(res => {
-                  console.log(res)
+                  // console.log(res)
                   setPeople(res)
+                  let empObj={name:'',email:'',phone:''}
+
+                  res.push(empObj)
+                 
                   return res as Person[]
                   
           })
         };
  
   const [people,setPeople] = useState<Person[]>([]);
-  const [columns, setColumns] = useState<Column[]>(getColumns());
-   console.log(people)
+  const [columns] = useState<Column[]>(getColumns());
+  //  console.log(people)
+
+
+
+
+//function for changes done in table
+const appplyChanges=(
+  changes:CellChange<MyTextCell>[],
+  prevPeople:Person[]
+):Person[]=>{
+  changes.forEach((change)=>{
+
+  
+    console.log(changes)
+    const personIndex= change.rowId;
+    const fieldName= change.columnId;
+
+    // console.log(personIndex)
+    // console.log(fieldName)
+
+    
+    prevPeople[personIndex][fieldName]= change.newCell.text;
+    // console.log(prevPeople[personIndex],"prevPeopleprevPeople")
+    
+    // console.log(prevPeople[personIndex][fieldName])
+    // console.log(change)
+    makePost(prevPeople[personIndex])
+  });
+
+
+
+
+  // if(empObj.name!=="" || empObj.email!=="" || empObj.phone !==""){
+  //   makePost(empObj)
+  // }
+
+
+  return [...prevPeople];
+}
+
+const makePost=(payload)=>{
+
+  
+  console.log(payload,payload._id,"payloadpayloadpayload")
+  if (payload._id){
+    axios.patch(`http://localhost:8000/reg/${payload._id}/`,payload,)
+    .then((res) =>{
+      console.log(res);
+      getPeople()
+    })
+    .catch( (error) =>{
+      console.log(error);
+    });  
+  }
+  else{
+    axios.post('http://localhost:8000/reg',payload,)
+    .then((res) =>{
+      console.log(res);
+      getPeople()
+    })
+    .catch( (error) =>{
+      console.log(error);
+    });
+  }
+  
+}
+
+
   useEffect(()=>{
    getPeople()
   },[])
@@ -160,48 +185,9 @@ function App() {
   // const columns= getColumns();
 
 
-  const handleColumnsReorder = (targetColumnId: Id, columnIds: Id[]) => {
-    //  console.log(targetColumnId)
-    const to = columns.findIndex((column) => column.columnId === targetColumnId);
-    // console.log(to);
-    const columnIdxs = columnIds.map((columnId) => columns.findIndex((c) => c.columnId === columnId));
-    setColumns(prevColumns => reorderArray(prevColumns, columnIdxs, to));
-}
 
-const handleRowsReorder = (targetRowId: Id, rowIds: Id[]) => {
-    setPeople((prevPeople) => {
-        const to = people.findIndex(person => person.id === targetRowId);
-        const rowsIds = rowIds.map((id) => people.findIndex(person => person.id === id));
-        return reorderArray(prevPeople, rowsIds, to);
-    });
-}
 
-// const handleCanReorderRows = (targetRowId: Id, rowIds: Id[]): boolean => {
-//   return targetRowId !== 'header';
-// }
 
-const handleContextMenu = (
-  selectedRowIds: Id[],
-  selectedColIds: Id[],
-  selectionMode: SelectionMode,
-  menuOptions: MenuOption[]
-): MenuOption[] => {
-  if (selectionMode === "row") {
-    menuOptions = [
-      ...menuOptions,
-      {
-        id: "removePerson",
-        label: "Remove person",
-        handler: () => {
-          setPeople(prevPeople => {
-            return [...prevPeople.filter((person, idx) => !selectedRowIds.includes(person.id))]
-          })
-        }
-      }
-    ];
-  }
-  return menuOptions;
-}
 
   const handleChanges=(changes)=>{
     setPeople((prevPeople)=>appplyChanges(changes,prevPeople))
@@ -214,25 +200,8 @@ const handleContextMenu = (
        rows={rows}
        columns={columns} 
        onCellsChanged={handleChanges}
-       onColumnsReordered={handleColumnsReorder}
-       onRowsReordered={handleRowsReorder}
+       enableFillHandle={true}
 
-
-
-
-      //  canReorderRows={handleCanReorderRows}
-
-      //  stickyLeftColumns={1}
-      //  stickyRightColumns={1}
-		  //  stickyTopRows={1}
-		  //  stickyBottomRows={1}
-
-      onContextMenu={handleContextMenu}
-      enableRangeSelection
-      enableRowSelection
-      enableColumnSelection
-      // enableFillHandle
-      // enableGroupIdRender
        />
     </div>
   );

@@ -1,64 +1,17 @@
-import './App.css';
-import { ReactGrid, Column, Row, CellChange, TextCell } from "@silevis/reactgrid";
+// import './App.css';
+import { ReactGrid, Column, Row, CellChange, TextCell ,Id ,MenuOption,SelectionMode} from "@silevis/reactgrid";
 import "@silevis/reactgrid/styles.css";
 import { useEffect, useState } from 'react';
 
 
-// {
-//   "id": 1,
-//   "name": "Leanne Graham",
-//   "username": "Bret",
-//   "email": "Sincere@april.biz",
-//   "address": {
-//       "street": "Kulas Light",
-//       "suite": "Apt. 556",
-//       "city": "Gwenborough",
-//       "zipcode": "92998-3874",
-//       "geo": {
-//           "lat": "-37.3159",
-//           "lng": "81.1496"
-//       }
-//   },
-//   "phone": "1-770-736-8031 x56442",
-//   "website": "hildegard.org",
-//   "company": {
-//       "name": "Romaguera-Crona",
-//       "catchPhrase": "Multi-layered client-server neural-net",
-//       "bs": "harness real-time e-markets"
-//   }
-// }
 
-
-
-interface iGeo{
-  lat: string,
-  lng: string
-}
-
-interface iCompany{
-  name: string,
-  catchPhrase: string,
-  bs: string
-}
-
-interface iAddress{
-  street: string,
-  suite: string,
-  city: string,
-  zipcode: string,
-  geo: iGeo
-}
 
 //interface of Person
 interface Person{
   id: number,
   name: string,
-  username: string,
   email: string,
-  address: iAddress,
   phone: string,
-  website: string,
-  company: iCompany
 }
 
 // interface of Column of reordering
@@ -83,48 +36,36 @@ const getColumns = (): Column[] => [
   { columnId: "phone", width: 250, resizable:true, reorderable:true },
 ];
 
-const headerRow: Row = {
-  rowId: "header",
-  cells: [
-    { type: "header", text: "Name" },
-    { type: "header", text: "Email" },
-    { type: "header", text: " Phone No." },
-    { type: "header", text: " Website" },
-  ]
-};
+// const headerRow: Row = {
+//   rowId: "header",
+//   cells: [
+//     { type: "header", text: "Name" },
+//     { type: "header", text: "Email" },
+//     { type: "header", text: " Phone No." },
+//     { type: "header", text: " Website" },
+//   ]
+// };
 
-
-//making of rows
-// const getRows = (people: Person[]): Row[] => [
-//   headerRow,
-//   ...people.map<Row>((person, i) => ({
-//     rowId: i,
-//     reorderable:true,
-//     cells: [
-//       { type: "text", text: person.name },
-//       { type: "text", text: person.email },
-//       { type: "text", text: person.phone },
-//       { type: "text", text: person.website },
-
-//     ]
-//   }))
-// ];
 
 // new row making for reordering
+
+
+
 const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
 
-  console.log(columnMap,"test",columnsOrder)
+  // console.log(columnMap,"test",columnsOrder)
   return [
     {
       rowId: "header",
       cells: [
         { type: "header", text: columnMap[columnsOrder[0]] },
         { type: "header", text: columnMap[columnsOrder[1]] },
-        { type: "header", text: columnMap[columnsOrder[2]] }
+        { type: "header", text: columnMap[columnsOrder[2]] },
       ]
     },
     ...people.map<Row>((person, i) => ({
-      rowId: person.id,
+      // rI: person.id,
+      rowId: i,
       reorderable: true,
       cells: [
         { type: "text", text: person[columnsOrder[0]] },
@@ -134,7 +75,7 @@ const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
     }))
   ]
 };
-
+ 
 
 //function for changes done in table
 const appplyChanges=(
@@ -142,10 +83,18 @@ const appplyChanges=(
   prevPeople:Person[]
 ):Person[]=>{
   changes.forEach((change)=>{
+
+    console.log(changes)
     const personIndex= change.rowId;
     const fieldName= change.columnId;
 
+    console.log(personIndex)
+    console.log(fieldName)
+
+    
     prevPeople[personIndex][fieldName]= change.newCell.text;
+    console.log(prevPeople[personIndex][fieldName])
+    console.log(change)
   });
 
 
@@ -153,16 +102,26 @@ const appplyChanges=(
 }
 
 
+const reorderArray = <T extends {}>(arr: T[], idxs: number[], to: number) => {
+  const movedElements = arr.filter((_, idx) => idxs.includes(idx));
+  const targetIdx = Math.min(...idxs) < to ? to += 1 : to -= idxs.filter(idx => idx < to).length;
+  const leftSide = arr.filter((_, idx) => idx < targetIdx && !idxs.includes(idx));
+  const rightSide = arr.filter((_, idx) => idx >= targetIdx && !idxs.includes(idx));
+  return [...leftSide, ...movedElements, ...rightSide];
+}
+
 
 function App() {
 
   //get data from api and store it into state variable people
   const getPeople = async():Promise<Person[]> =>{
-    return fetch('https://jsonplaceholder.typicode.com/users')
+    return fetch('http://localhost:8000/reg')
           .then(res => res.json())
           .then(res => {
                   console.log(res)
                   setPeople(res)
+                  res.push({'name':'',email:'',phone:''})
+                 
                   return res as Person[]
                   
           })
@@ -170,15 +129,59 @@ function App() {
  
   const [people,setPeople] = useState<Person[]>([]);
   const [columns, setColumns] = useState<Column[]>(getColumns());
+   console.log(people)
   useEffect(()=>{
    getPeople()
   },[])
 
-  console.log(people)
+  // console.log(people)
 
   const rows= getRows(people,columns.map(c => c.columnId as ColumnId));
   // const columns= getColumns();
 
+
+  const handleColumnsReorder = (targetColumnId: Id, columnIds: Id[]) => {
+    //  console.log(targetColumnId)
+    const to = columns.findIndex((column) => column.columnId === targetColumnId);
+    // console.log(to);
+    const columnIdxs = columnIds.map((columnId) => columns.findIndex((c) => c.columnId === columnId));
+    setColumns(prevColumns => reorderArray(prevColumns, columnIdxs, to));
+}
+
+const handleRowsReorder = (targetRowId: Id, rowIds: Id[]) => {
+    setPeople((prevPeople) => {
+        const to = people.findIndex(person => person.id === targetRowId);
+        const rowsIds = rowIds.map((id) => people.findIndex(person => person.id === id));
+        return reorderArray(prevPeople, rowsIds, to);
+    });
+}
+
+// const handleCanReorderRows = (targetRowId: Id, rowIds: Id[]): boolean => {
+//   return targetRowId !== 'header';
+// }
+
+const handleContextMenu = (
+  selectedRowIds: Id[],
+  selectedColIds: Id[],
+  selectionMode: SelectionMode,
+  menuOptions: MenuOption[]
+): MenuOption[] => {
+  if (selectionMode === "row") {
+    menuOptions = [
+      ...menuOptions,
+      {
+        id: "removePerson",
+        label: "Remove person",
+        handler: () => {
+          setPeople(prevPeople => {
+            return [...prevPeople.filter((person, idx) => !selectedRowIds.includes(person.id))]
+          })
+        }
+      }
+    ];
+  }
+  return menuOptions;
+}
 
   const handleChanges=(changes)=>{
     setPeople((prevPeople)=>appplyChanges(changes,prevPeople))
@@ -191,15 +194,25 @@ function App() {
        rows={rows}
        columns={columns} 
        onCellsChanged={handleChanges}
+      //  onColumnsReordered={handleColumnsReorder}
+      //  onRowsReordered={handleRowsReorder}
 
-    //    stickyLeftColumns={1}
+
+
+
+      //  canReorderRows={handleCanReorderRows}
+
+      //  stickyLeftColumns={1}
       //  stickyRightColumns={1}
 		  //  stickyTopRows={1}
 		  //  stickyBottomRows={1}
 
-    //   enableRangeSelection
-    //   enableRowSelection
+      onContextMenu={handleContextMenu}
+      // enableRangeSelection
+      // enableRowSelection
       // enableColumnSelection
+      // enableFillHandle
+      // enableGroupIdRender
        />
     </div>
   );
