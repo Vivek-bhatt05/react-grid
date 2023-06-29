@@ -1,5 +1,5 @@
 // import './App.css';
-import { ReactGrid, Column, Row, CellChange,TextCell} from "@silevis/reactgrid";
+import { ReactGrid, Column, Row} from "@silevis/reactgrid";
 import "@silevis/reactgrid/styles.css";
 import { useEffect, useState } from 'react';
 import axios from "axios"
@@ -26,15 +26,17 @@ interface ColumnMap{
   email : "Email";
   phone : "Phone No.";
   // check : "Check",
-  date : "Date"
+  date : "Date",
 }
+
+
 
 const columnMap: ColumnMap={
   name : "Name",
   email : "Email",
   phone : "Phone No.",
   // check : "Check",
-  date : "Date"
+  date : "Date",
   
 }
 
@@ -42,11 +44,10 @@ type ColumnId = keyof ColumnMap;
 
 //making of columns
 const getColumns = (): Column[] => [
-  { columnId: "name", width: 250, resizable:true, reorderable:true },
+  { columnId: "date", width: 200, resizable:true, reorderable:true },
+  { columnId: "name", width: 200, resizable:true, reorderable:true },
   { columnId: "email", width: 250, resizable:true, reorderable:true },
-  { columnId: "phone", width: 250, resizable:true, reorderable:true },
-  // { columnId: "check", width: 250, resizable:true, reorderable:true },
-  { columnId: "date", width: 250, resizable:true, reorderable:true },
+  { columnId: "phone", width: 200, resizable:true, reorderable:true },
 ];
 
 // const headerRow: Row = {
@@ -83,12 +84,13 @@ const getRows = (people: Person[], columnsOrder: ColumnId[]): Row[] => {
       rowId: i,
       reorderable: true,
       cells: [
-        { type: "text", text: person[columnsOrder[0]] },
-        { type: "email", text: person[columnsOrder[1]],validator(address) {
+        // { type: "text" , text: person[columnsOrder[0]]},
+        { type: "date", date:new Date(person[columnsOrder[0]]) },
+        { type: "text", text: person[columnsOrder[1]] },
+        { type: "email", text: person[columnsOrder[2]],validator(address) {
           return !! address.match(/.+@.+/);
         } }, 
-        { type: "text", text: person[columnsOrder[2]]}, 
-        { type: "date" , date: new Date(person[columnsOrder[3]]) },
+        { type: "text", text: person[columnsOrder[3]]}, 
       ]
     }))
   ]
@@ -128,14 +130,20 @@ function App() {
 
 //function for changes done in table
 const appplyChanges=(
-  changes:CellChange<TextCell>[],
+  changes,
   prevPeople:Person[]
 ):Person[]=>{
   changes.forEach((change)=>{
     console.log(changes)
     const personIndex= change.rowId;
-    const fieldName= change.columnId;    
-    prevPeople[personIndex][fieldName]= change.newCell.text;
+    const fieldName= change.columnId;   
+    
+    if(fieldName==='date'){
+      prevPeople[personIndex][fieldName]= change.newCell.date;
+    }
+    else{
+      prevPeople[personIndex][fieldName]= change.newCell.text;
+    }
     console.log(personIndex,fieldName)
     makePost(prevPeople[personIndex])
   });
